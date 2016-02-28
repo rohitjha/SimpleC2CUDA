@@ -1,7 +1,8 @@
  #include<stdio.h>
 int main(){
 
-  int s,temp,i,j,a[20];
+  int s,temp,i,j;
+  int a[20];
 
   printf("Enter total numbers of elements: ");
   scanf("%d",&s);

@@ -1,6 +1,39 @@
 #!/usr/bin/python
 
 import sys
+import re
+
+def findArrayVarName(fileName):
+	source = open(fileName, "r")
+	inputLineByLine = source.readlines()
+	source.close()
+
+	arrayVarPattern = re.compile('int(\s)+((\w)+)((\[(\d)*\]))+(.)*;')
+	#arrayInxPattern = re.compiler
+
+	names = []
+	dims = [] #(m) or (m,n) or (m,n,o)
+
+	for line in inputLineByLine:
+		list1 = re.split(arrayVarPattern, line)
+		if len(list1) >= 3:
+			list1 = list1[2:]
+			#print list1
+			names.append(list1[0]) # got name
+
+	# now find size of array/matrix
+	for line in inputLineByLine:
+		list1 = re.split(arrayVarPattern, line)
+		if len(list1) >= 3:
+			countOpen = line.count("[")
+			countClosed = line.count("]")
+
+			if countOpen == countClosed:
+				dims.append(countOpen)
+			# count num of [ and ]
+
+	print (names, dims)
+	return (names, dims)
 
 def extractNotFromPragmaScop(fileName):
 	source = open(fileName, "r")
@@ -78,21 +111,45 @@ def main():
 	fkernelcu = name + "_host.cu"
 	fkernelhu = name + "_host.hu"
 
-	kernelhu = "#include \"cuda.h\"\n\n__global__ void kernel0();"
-	kernelcu = "#include \"" + fkernelcu + "\"\n\n__global__ void kernel0(){}"
+	kernelhu = "#include \"cuda.h\"\n\n__global__ void kernel0("
+	kernelcu = "#include \"" + fkernelhu + "\"\n\n__global__ void kernel0("
 
-	# get array variable names and sizes
-	# update code for _kernel.hu and store in kernelhu
-	# update code for _kernel.cu and store in kernelhu
+	# get array variable names and dimensions
+	(varlist, dimList) = findArrayVarName(fname)
 	
+	print "\nVariables: ",
+	print varlist
+
+	for var in varlist:
+		varptr = 'int *' + str(var) + ', '
+		kernelhu += varptr
+		kernelcu += varptr
+
+	# CODE FOR _kernel.hu
+	kernelhu = kernelhu[:-2] + ');\n'
+	print(kernelhu)
+	'''
+	fkhu = open(fkernelhu, "w")
+	fkhu.write(kernelhu)
+	fkhu.close()
+	'''
+	
+
+	# CODE FOR _kernel.cu
+	kernelcu = kernelcu[:-2] + ')\n{\n}'
+	#print(kernelcu)
+	
+	
+
 	# create code for _host.cu and store in hostcu
 	host_cu = extractNotFromPragmaScop(fname)
 	host_cu = "#include \"" + fkernelhu + "\"\n" + host_cu
-	print(host_cu)
+	#print(host_cu)
+	
 	
 	kernel_cu = extractFromPragmaScop(fname)
-	print("\nscop extracted:")
-	print(kernel_cu)
+	#print("\nscop extracted:")
+	#print(kernel_cu)
 
 if __name__ == '__main__':
 	main()
