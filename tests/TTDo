@@ -1,0 +1,6 @@
+1. copy rest of the code
+2. keep a track of variables in the pragma scop section
+	2.1 assign memory
+	2.2 size of variables
+3. calculating dimBlock, DimGrid
+
