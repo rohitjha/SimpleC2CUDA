@@ -124,12 +124,6 @@ def removeExtraParen(code):
 		
 	return correctCode
 
-def RepresentsVar(s):
-    try: 
-        int(s)
-        return False
-    except ValueError:
-        return True
 
 def main():
 	fname = sys.argv[1]
@@ -211,17 +205,13 @@ def main():
 	#print "MAXDIM: ", maxDim
 
 	if maxDim == 1:
-		#expr = re.compile('.*(\[.*\])(\[.*\]).*')
 		for line in codelines.split('\n'):
 			if '[' in line:
 				indexOpen = line.index('[')
 				indexClose = line.index(']')
 				var = line[indexOpen:indexClose+1]
-				# if type of index is not int:
 				
-				varMid = var[1:-1]
-
-				if RepresentsVar(varMid):
+				if var[1:-1].isdigit():
 					updatedCodeLines.append(line.replace(var, dimString))
 				else:
 					updatedCodeLines.append(line)
@@ -230,7 +220,6 @@ def main():
 
 	# replace [i][j] with [t0*dim+t1]
 	# doesnt work for mul.c
-	# works for add.c
 	elif maxDim == 2:
 		for line in codelines.split('\n'):
 			if '[' in line:
@@ -243,17 +232,10 @@ def main():
 				updatedCodeLines.append(line)
 
 	updatedCodeLines = '\n'.join(updatedCodeLines)
-
-		#expr = re.compile('.*(\[.*\])(\[.*\]).*')
 	
 	#print(kernel_cu)
 	kernelcu += updatedCodeLines
-
-	#for i in range(skipFor-1):
-	#	kernelcu += "\n\t}\n"
-	#kernelcu += "}"
 	kernelcu += "\n\t}\n}\n"
-
 	kernelcu = removeExtraParen(kernelcu)
 	
 	fkcu = open(fkernelcu, "w")
