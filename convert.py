@@ -9,10 +9,10 @@ def findArrayVarName(fileName):
 	source.close()
 
 	arrayVarPattern = re.compile('int(\s)+((\w)+)((\[(\d)*\]))+(.)*;')
-	#arrayInxPattern = re.compiler
 
 	names = []
-	dims = [] #(m) or (m,n) or (m,n,o)
+	dims = []
+	sizes = []
 
 	for line in inputLineByLine:
 		list1 = re.split(arrayVarPattern, line)
@@ -20,6 +20,16 @@ def findArrayVarName(fileName):
 			list1 = list1[2:]
 			#print list1
 			names.append(list1[0]) # got name
+
+			size = list1[2]
+			if len(size) > 2:
+				size = int( size[1 : (len(size) - 1)] )
+			else:
+				if len(sizes) > 0:
+					size = max(sizes)
+				else:
+					size = 0
+			sizes.append(size)
 
 	# now find size of array/matrix
 	for line in inputLineByLine:
@@ -32,8 +42,8 @@ def findArrayVarName(fileName):
 				dims.append(countOpen)
 			# count num of [ and ]
 
-	print (names, dims)
-	return (names, dims)
+	#print (names, dims)
+	return (names, dims, sizes)
 
 def extractNotFromPragmaScop(fileName):
 	source = open(fileName, "r")
@@ -114,42 +124,74 @@ def main():
 	kernelhu = "#include \"cuda.h\"\n\n__global__ void kernel0("
 	kernelcu = "#include \"" + fkernelhu + "\"\n\n__global__ void kernel0("
 
-	# get array variable names and dimensions
-	(varlist, dimList) = findArrayVarName(fname)
 	
-	print "\nVariables: ",
-	print varlist
+
+	# get array variable names and dimensions
+	print findArrayVarName(fname)
+	(varlist, dimList, sizeList) = findArrayVarName(fname)
 
 	for var in varlist:
 		varptr = 'int *' + str(var) + ', '
 		kernelhu += varptr
 		kernelcu += varptr
 
+	
+
 	# CODE FOR _kernel.hu
 	kernelhu = kernelhu[:-2] + ');\n'
-	print(kernelhu)
-	'''
+	#print(kernelhu)
+	
 	fkhu = open(fkernelhu, "w")
 	fkhu.write(kernelhu)
 	fkhu.close()
-	'''
 	
 
 	# CODE FOR _kernel.cu
-	kernelcu = kernelcu[:-2] + ')\n{\n}'
-	#print(kernelcu)
+	kernelcu = kernelcu[:-2] + ')\n{\n\t'
 	
+	maxDim = max(dimList)
+	blockIdx = ""
+	threadIdx = ""
+
+	for i in range(maxDim):
+		blockIdx += "int b" + str(i) + " = blockIdx." + chr(ord('x') + maxDim - i - 1) + ";\n\t"
+		threadIdx += "int t" + str(i) + " = threadIdx." + chr(ord('x') + maxDim - i - 1) + ";\n\t"
+
+	kernelcu += blockIdx + threadIdx
+
+	kernelcu += "{\n\t"
+	#add code
+
+	kernel_cu = extractFromPragmaScop(fname)
+
+	codelines = ""
+	skipFor = 0
+	dimString = ""
+
+	if maxDim == 1:
+		dimString = "[t0]"
+	elif maxDim == 2:
+		dimString = "[t0*" 
+
+	for line in kernel_cu.split('\n'):
+		if '#pragma' not in line:# and skipFor < 2:
+			if 'for' in line:
+				skipFor += 1
+			if skipFor > 2 or 'for' not in line:
+				codelines += line + "\n"
+			#do something on codelines to convert to CUDA
+
+	
+	#print(kernel_cu)
+	kernelcu += codelines#kernel_cu
+	kernelcu += "\n\t}\n}"
+	print(kernelcu)
 	
 
 	# create code for _host.cu and store in hostcu
 	host_cu = extractNotFromPragmaScop(fname)
 	host_cu = "#include \"" + fkernelhu + "\"\n" + host_cu
 	#print(host_cu)
-	
-	
-	kernel_cu = extractFromPragmaScop(fname)
-	#print("\nscop extracted:")
-	#print(kernel_cu)
 
 if __name__ == '__main__':
 	main()
