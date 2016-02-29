@@ -2,7 +2,8 @@
 
 int main()
 {
-	int a[1000], b[1000];
+	int a[1000];
+    int b[1000];
 
 	for (int i = 0; i < 1000; ++i)
 		a[i] = i;

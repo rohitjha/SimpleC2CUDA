@@ -112,6 +112,16 @@ def extractFromPragmaScop(fileName):
 	loc = [line for line in scopLines]
 	return ''.join(loc)
 
+def removeExtraParen(code):
+	diff = code.count('}') - code.count('{')
+	correctCode = code
+
+	if diff > 0:
+		revCode = code[::-1]
+		revCode = revCode.replace('}', '', diff)
+		correctCode = revCode[::-1]
+		
+	return correctCode
 
 def main():
 	fname = sys.argv[1]
@@ -127,7 +137,7 @@ def main():
 	
 
 	# get array variable names and dimensions
-	print findArrayVarName(fname)
+	#print findArrayVarName(fname)
 	(varlist, dimList, sizeList) = findArrayVarName(fname)
 
 	for var in varlist:
@@ -150,6 +160,7 @@ def main():
 	kernelcu = kernelcu[:-2] + ')\n{\n\t'
 	
 	maxDim = max(dimList)
+	maxSize = max(sizeList)
 	blockIdx = ""
 	threadIdx = ""
 
@@ -159,7 +170,7 @@ def main():
 
 	kernelcu += blockIdx + threadIdx
 
-	kernelcu += "{\n\t"
+	kernelcu += "{\n"
 	#add code
 
 	kernel_cu = extractFromPragmaScop(fname)
@@ -171,7 +182,8 @@ def main():
 	if maxDim == 1:
 		dimString = "[t0]"
 	elif maxDim == 2:
-		dimString = "[t0*" 
+		dimString = "[t0*" + str(maxSize) + "+t1]"
+	
 
 	for line in kernel_cu.split('\n'):
 		if '#pragma' not in line:# and skipFor < 2:
@@ -179,13 +191,59 @@ def main():
 				skipFor += 1
 			if skipFor > 2 or 'for' not in line:
 				codelines += line + "\n"
-			#do something on codelines to convert to CUDA
 
 	
+	# do something on codelines to convert to CUDA
+	#expr = ""
+	
+	# replace [i] with [t0]
+	
+	updatedCodeLines = []
+
+	#print "MAXDIM: ", maxDim
+
+	if maxDim == 1:
+		#expr = re.compile('.*(\[.*\])(\[.*\]).*')
+		for line in codelines.split('\n'):
+			if '[' in line:
+				indexOpen = line.index('[')
+				indexClose = line.index(']')
+				var = line[indexOpen:indexClose+1]
+				updatedCodeLines.append(line.replace(var, dimString))
+			else:
+				updatedCodeLines.append(line)
+
+	# replace [i][j] with [t0*dim+t1]
+	# doesnt work for mul.c
+	# works for add.c
+	elif maxDim == 2:
+		for line in codelines.split('\n'):
+			if '[' in line:
+				indexOpen = line.index('[')
+				indexClose = line.index(']') # need to find second occurrence of ]
+				indexClose = line.index(']', indexClose+1)
+				var = line[indexOpen:indexClose+1]
+				updatedCodeLines.append(line.replace(var, dimString))
+			else:
+				updatedCodeLines.append(line)
+
+	updatedCodeLines = '\n'.join(updatedCodeLines)
+
+		#expr = re.compile('.*(\[.*\])(\[.*\]).*')
+	
 	#print(kernel_cu)
-	kernelcu += codelines#kernel_cu
-	kernelcu += "\n\t}\n}"
-	print(kernelcu)
+	kernelcu += updatedCodeLines
+
+	#for i in range(skipFor-1):
+	#	kernelcu += "\n\t}\n"
+	#kernelcu += "}"
+	kernelcu += "\n\t}\n}\n"
+
+	kernelcu = removeExtraParen(kernelcu)
+	
+	fkcu = open(fkernelcu, "w")
+	fkcu.write(kernelcu)
+	fkcu.close()
 	
 
 	# create code for _host.cu and store in hostcu
