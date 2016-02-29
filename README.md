@@ -5,10 +5,10 @@ Generates host and device CUDA code from regular C programs.
 
 To run, call:
 
-$ python convert.py <FILE>.c
+$ python convert.py tests/file.c
 
-It generates <FILE>_host.hu, <FILE>_host.cu, containing code for the CUDA
-device. Need to generate <FILE>_kernel.cu as well.
+It generates file_kernel.hu, file_kernel.cu, containing code for the CUDA
+device. Need to generate file_host.cu as well.
 
 
-You can try out a.c, add.c and dead.c from tests/.
+You can try out a.c, add.c, dead.c and live_out.c from tests/.
