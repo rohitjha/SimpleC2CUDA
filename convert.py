@@ -130,8 +130,8 @@ def main():
 	name = fname.split('/')[1][:-2]
 
 	fhostcu = name + "_host.cu"
-	fkernelcu = name + "_host.cu"
-	fkernelhu = name + "_host.hu"
+	fkernelcu = name + "_kernel.cu"
+	fkernelhu = name + "_kernel.hu"
 
 	kernelhu = "#include \"cuda.h\"\n\n__global__ void kernel0("
 	kernelcu = "#include \"" + fkernelhu + "\"\n\n__global__ void kernel0("

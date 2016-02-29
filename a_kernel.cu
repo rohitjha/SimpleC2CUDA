@@ -1,4 +1,4 @@
-#include "a_host.hu"
+#include "a_kernel.hu"
 
 __global__ void kernel0(int *a, int *b, int *c)
 {

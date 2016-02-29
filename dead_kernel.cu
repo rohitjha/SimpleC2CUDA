@@ -1,4 +1,4 @@
-#include "dead_host.hu"
+#include "dead_kernel.hu"
 
 __global__ void kernel0(int *a, int *b)
 {
@@ -7,9 +7,9 @@ __global__ void kernel0(int *a, int *b)
 	{
 		int c;
 		int d;
-		c = a[t0];
+		c = a[i];
 		d = c;
-		b[t0] = c;
+		b[i] = c;
 	}
 
 
