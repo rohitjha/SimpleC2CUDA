@@ -8,6 +8,7 @@ def findArrayVarName(fileName):
 	inputLineByLine = source.readlines()
 	source.close()
 
+	#int array
 	arrayVarPattern = re.compile('int(\s)+((\w)+)((\[(\d)*\]))+(.)*;')
 
 	names = []
@@ -123,6 +124,13 @@ def removeExtraParen(code):
 		
 	return correctCode
 
+def RepresentsVar(s):
+    try: 
+        int(s)
+        return False
+    except ValueError:
+        return True
+
 def main():
 	fname = sys.argv[1]
 	name = fname.split('/')[1][:-2]
@@ -209,7 +217,14 @@ def main():
 				indexOpen = line.index('[')
 				indexClose = line.index(']')
 				var = line[indexOpen:indexClose+1]
-				updatedCodeLines.append(line.replace(var, dimString))
+				# if type of index is not int:
+				
+				varMid = var[1:-1]
+
+				if RepresentsVar(varMid):
+					updatedCodeLines.append(line.replace(var, dimString))
+				else:
+					updatedCodeLines.append(line)
 			else:
 				updatedCodeLines.append(line)
 
