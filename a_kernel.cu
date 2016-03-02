@@ -7,8 +7,7 @@ __global__ void kernel0(int *a, int *b, int *c)
 	{
 {
 
-a[i]=a[i]+b[i];
-c[i]=a[i];
+c[i]=a[i]+b[i];
 
 }
 

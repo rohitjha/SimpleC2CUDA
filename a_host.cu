@@ -1,3 +1,4 @@
+#include "a_kernel.hu"
 #include<stdio.h>
 #include<math.h>
 #include<stdlib.h>
@@ -11,14 +12,16 @@ int i;
 double total_time;
  clock_t start, end;
 start = clock();//time count starts 
-#pragma scop
-for(i=0;i<4;i++)
-{
+int *dev_a;
+int *dev_b;
+int *dev_c;
+cudaMalloc((void **) &dev_a, (4) * sizeof(int);
+cudaMalloc((void **) &dev_b, (4) * sizeof(int);
+cudaMalloc((void **) &dev_c, (4) * sizeof(int);
+cudaFree(dev_a);
+cudaFree(dev_b);
+cudaFree(dev_c);
 
-c[i]=a[i]+b[i];
-
-}
-#pragma endscop
 
 end = clock();//time count stops 
  total_time = ((double) (end - start));//calulate total time

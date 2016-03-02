@@ -247,6 +247,74 @@ def main():
 	host_cu = extractNotFromPragmaScop(fname)
 	host_cu = "#include \"" + fkernelhu + "\"\n" + host_cu
 	#print(host_cu)
+	#add new code to the line where #pragma scop is
+	
+	
+
+	insertPosition = host_cu.find('#pragma scop')
+
+	if 'for' in host_cu[insertPosition:]:
+		# add int *vars
+		dev_varptr = []
+		dev_vars = []
+		for var in varlist:
+			dev_varptr.append("int *dev_" + str(var) + ";\n")
+			dev_vars.append("dev_" + str(var))
+		
+		dev_varptr = ''.join(dev_varptr)
+
+		#print dev_varptr
+		
+
+		# do cuda malloc for all vars
+		line = ""
+		for var in dev_vars:
+			line += "cudaMalloc((void **) &" + str(var) + ", "
+			for dim in range(maxDim):
+				line += "(" + str(maxSize) + ") *"
+			line += " sizeof(int);\n"
+
+		#add line
+		host_cu = host_cu[:insertPosition] + dev_varptr + line + host_cu[insertPosition:]
+
+		
+
+		# call cudafree on all vars
+		insertPosition = host_cu.find('#pragma scop')
+		freeline = ""
+		for var in dev_vars:
+			freeline += "cudaFree(" + str(var) + ");\n"
+
+		host_cu = host_cu[:insertPosition] + freeline + host_cu[insertPosition:]
+
+
+
+		# do cudamemcpy from host to device for input vars
+		# dimblock
+		# dimgrid
+		# call kernel0
+		# cudamemcpy from device to host for output var
+
+	
+	else:
+		content = extractFromPragmaScop(fname)
+		updatedContent = []
+		for line in content.split('\n'):
+			if '#pragma' not in line:
+				updatedContent.append(line)
+		updatedContent = '\n'.join(updatedContent)
+
+		host_cu = host_cu[:insertPosition] + updatedContent + host_cu[insertPosition:]
+
+	
+	host_cu = host_cu.replace('#pragma scop', '')
+	host_cu = host_cu.replace('#pragma endscop', '')
+	#print host_cu
+
+	fhcu = open(fhostcu, "w")
+	fhcu.write(host_cu)
+	fhcu.close()
+
 
 if __name__ == '__main__':
 	main()
