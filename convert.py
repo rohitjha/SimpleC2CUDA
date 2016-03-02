@@ -47,6 +47,10 @@ def findArrayVarName(fileName):
 	#print (names, dims)
 	return (names, dims, sizes)
 
+
+
+
+
 def extractNotFromPragmaScop(fileName):
 	source = open(fileName, "r")
 	inputLineByLine = source.readlines()
@@ -71,6 +75,8 @@ def extractNotFromPragmaScop(fileName):
 	loc = [code for code in finalCode]
 	loc = ''.join(loc)
 	return loc
+
+
 
 def extractFromPragmaScop(fileName):
 	# read input C program
@@ -114,6 +120,8 @@ def extractFromPragmaScop(fileName):
 	loc = [line for line in scopLines]
 	return ''.join(loc)
 
+
+
 def removeExtraParen(code):
 	diff = code.count('}') - code.count('{')
 	correctCode = code
@@ -126,19 +134,26 @@ def removeExtraParen(code):
 	return correctCode
 
 
+
 def main():
+	# Get original file name
+	if len(sys.argv) != 2:
+		print "Error: Please specify an input C file to transform as argument."
+		sys.exit()
+
 	fname = sys.argv[1]
 	name = fname.split('/')[1][:-2]
 
+	# create names of target files
 	fhostcu = name + "_host.cu"
 	fkernelcu = name + "_kernel.cu"
 	fkernelhu = name + "_kernel.hu"
 
+
+	# Code for _kernel.hu and _kernel.cu
 	kernelhu = "#include \"cuda.h\"\n\n__global__ void kernel0("
 	kernelcu = "#include \"" + fkernelhu + "\"\n\n__global__ void kernel0("
-
 	
-
 	# get array variable names and dimensions
 	#print findArrayVarName(fname)
 	(varlist, dimList, sizeList) = findArrayVarName(fname)
@@ -149,17 +164,20 @@ def main():
 		kernelcu += varptr
 
 	
-
-	# CODE FOR _kernel.hu
+	# Code for _kernel.hu
 	kernelhu = kernelhu[:-2] + ');\n'
 	#print(kernelhu)
-	
+
+	# Write _kernel.hu to file
 	fkhu = open(fkernelhu, "w")
 	fkhu.write(kernelhu)
 	fkhu.close()
+	print("Created file " + fkernelhu)
 	
 
-	# CODE FOR _kernel.cu
+	
+
+	# Code for _kernel.cu
 	kernelcu = kernelcu[:-2] + ')\n{\n\t'
 	
 	maxDim = max(dimList)
@@ -172,15 +190,14 @@ def main():
 		threadIdx += "int t" + str(i) + " = threadIdx." + chr(ord('x') + maxDim - i - 1) + ";\n\t"
 
 	kernelcu += blockIdx + threadIdx
-
 	kernelcu += "{\n"
-	#add code
 
 	kernel_cu = extractFromPragmaScop(fname)
-
 	codelines = ""
 	skipFor = 0
 	dimString = ""
+
+	
 
 	if maxDim == 1:
 		dimString = "[t0]"
@@ -188,23 +205,20 @@ def main():
 		dimString = "[t0*" + str(maxSize) + "+t1]"
 	
 
+	
 	for line in kernel_cu.split('\n'):
-		if '#pragma' not in line:# and skipFor < 2:
+		if '#pragma' not in line:
 			if 'for' in line:
 				skipFor += 1
 			if skipFor > 2 or 'for' not in line:
 				codelines += line + "\n"
 
 	
-	# do something on codelines to convert to CUDA
-	#expr = ""
-	
-	# replace [i] with [t0]
 	
 	updatedCodeLines = []
+	
 
-	#print "MAXDIM: ", maxDim
-
+	# replace [i] with [t0]
 	if maxDim == 1:
 		for line in codelines.split('\n'):
 			if '[' in line:
@@ -219,6 +233,8 @@ def main():
 			else:
 				updatedCodeLines.append(line)
 
+	
+
 	# replace [i][j] with [t0*dim+t1]
 	# doesnt work for mul.c
 	elif maxDim == 2:
@@ -232,30 +248,36 @@ def main():
 			else:
 				updatedCodeLines.append(line)
 
+	
+
 	updatedCodeLines = '\n'.join(updatedCodeLines)
 	
-	#print(kernel_cu)
+	
+
 	kernelcu += updatedCodeLines
 	kernelcu += "\n\t}\n}\n"
 	kernelcu = removeExtraParen(kernelcu)
+	#print(kernelcu)
 	
+
+	# Write _kernel.cu to file
 	fkcu = open(fkernelcu, "w")
 	fkcu.write(kernelcu)
 	fkcu.close()
+	print("Created file " + fkernelcu)
 	
 
+	
 	# create code for _host.cu and store in hostcu
 	host_cu = extractNotFromPragmaScop(fname)
 	host_cu = "#include \"" + fkernelhu + "\"\n" + host_cu
 	#print(host_cu)
-	#add new code to the line where #pragma scop is
 	
-	
-
+	#add new code to the line where "#pragma scop" is
 	insertPosition = host_cu.find('#pragma scop')
 
 	if 'for' in host_cu[insertPosition:]:
-		# add int *vars
+		# add int * vars
 		dev_varptr = []
 		dev_vars = []
 		for var in varlist:
@@ -264,7 +286,6 @@ def main():
 		
 		dev_varptr = ''.join(dev_varptr)
 
-		#print dev_varptr
 		
 
 		# do cuda malloc for all vars
@@ -347,6 +368,7 @@ def main():
 		host_cu = host_cu[:insertPosition] + gridline + host_cu[insertPosition:]
 		
 		
+		
 		# call kernel0
 		call = "kernel0 <<<k0_dimGrid, k0_dimBlock>>> ("
 		for i in dev_vars:
@@ -361,6 +383,7 @@ def main():
 		host_cu = host_cu[:insertPosition] + "\t" + call + "}\n\n" + host_cu[insertPosition:]
 		
 
+		
 		# cudamemcpy from device to host for output var
 		omemcpy = ""
 		for ovar in outputvars:
@@ -370,6 +393,7 @@ def main():
 		host_cu = host_cu[:insertPosition] + omemcpy + "\n" + host_cu[insertPosition:]
 
 
+		
 		# call cudafree on all vars
 		freeline = ""
 		for var in dev_vars:
@@ -380,6 +404,7 @@ def main():
 
 	
 	else:
+		# Since there are no loops, we dont need to add CUDA code. Copy the original code as it is.
 		content = extractFromPragmaScop(fname)
 		updatedContent = []
 		for line in content.split('\n'):
@@ -390,13 +415,19 @@ def main():
 		host_cu = host_cu[:insertPosition] + updatedContent + host_cu[insertPosition:]
 
 	
+
+	#Remove all "#pragma scop" (and "#pragma endscop", if any)
 	host_cu = host_cu.replace('#pragma scop', '')
 	host_cu = host_cu.replace('#pragma endscop', '')
 	#print host_cu
 
+
+	# Write _host.cu to file
 	fhcu = open(fhostcu, "w")
 	fhcu.write(host_cu)
 	fhcu.close()
+	print("Created file " + fhostcu)
+	# DONE
 
 
 if __name__ == '__main__':
