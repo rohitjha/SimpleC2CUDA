@@ -2,6 +2,7 @@
 
 import sys
 import re
+from math import ceil
 
 def findArrayVarName(fileName):
 	source = open(fileName, "r")
@@ -275,25 +276,107 @@ def main():
 			line += " sizeof(int);\n"
 
 		#add line
-		host_cu = host_cu[:insertPosition] + dev_varptr + line + host_cu[insertPosition:]
+		host_cu = host_cu[:insertPosition] + "\n" + dev_varptr + "\n" + line + "\n" + host_cu[insertPosition:]
+
+
+
+		# find input var/vars and output var
+		inputvars = []
+		outputvars = []
+
+		for line in extractFromPragmaScop(fname).split('\n'):
+			if '=' in line:
+				pos = line.index('=')
+				valid = True
+				for var in varlist:
+					if var in line[:pos]:
+						outputvars.append(var)
+					elif var in line[pos:]:
+						inputvars.append(var)
+
+		#print inputvars
+		#print outputvars
+		
+
+		# do cudamemcpy from host to device for input vars
+		imemcpy = ""
+		for ivar in inputvars:
+			imemcpy += "cudaMemcpy(dev_" + ivar + ", " + ivar + ", (" + str(maxSize) + ") * sizeof(int), cudaMemcpyHostToDevice);\n"
+
+		insertPosition = host_cu.find('#pragma scop')
+		host_cu = host_cu[:insertPosition] + imemcpy + "\n" + host_cu[insertPosition:]
 
 		
 
-		# call cudafree on all vars
+		# dimblock
+		numThreads = maxSize
+		numBlocks = []
+		for i in range(maxDim):
+			if numThreads >= 32:
+				numBlocks.append(32)
+			else:
+				numBlocks.append(numThreads)
+
+		blockline = "{\n\tdim3 k0_dimBlock("
+		for i in numBlocks:
+			blockline += str(i) + ", "
+		
+		blockline = blockline[:-2]
+		
+		blockline += ");\n"
+
 		insertPosition = host_cu.find('#pragma scop')
+		host_cu = host_cu[:insertPosition] + blockline + host_cu[insertPosition:]
+
+		
+
+		# dimgrid
+		numGrids = []
+		for i in numBlocks:
+			numGrids.append(int(ceil(numThreads/float(i))))
+
+		gridline = "\tdim3 k0_dimGrid("
+		for i in numGrids:
+			gridline += str(i) + ", "
+		
+		gridline = gridline[:-2]
+		
+		gridline += ");\n"
+
+		insertPosition = host_cu.find('#pragma scop')
+		host_cu = host_cu[:insertPosition] + gridline + host_cu[insertPosition:]
+		
+		
+		# call kernel0
+		call = "kernel0 <<<k0_dimGrid, k0_dimBlock>>> ("
+		for i in dev_vars:
+			call += i + ", "
+
+		if len(dev_vars) > 1:
+			call = call[:-2]
+
+		call += ");\n"
+
+		insertPosition = host_cu.find('#pragma scop')
+		host_cu = host_cu[:insertPosition] + "\t" + call + "}\n\n" + host_cu[insertPosition:]
+		
+
+		# cudamemcpy from device to host for output var
+		omemcpy = ""
+		for ovar in outputvars:
+			omemcpy += "cudaMemcpy(" + ovar + ", dev_" + ovar + ", (" + str(maxSize) + ") * sizeof(int), cudaMemcpyDeviceToHost);\n"
+
+		insertPosition = host_cu.find('#pragma scop')
+		host_cu = host_cu[:insertPosition] + omemcpy + "\n" + host_cu[insertPosition:]
+
+
+		# call cudafree on all vars
 		freeline = ""
 		for var in dev_vars:
 			freeline += "cudaFree(" + str(var) + ");\n"
 
+		insertPosition = host_cu.find('#pragma scop')
 		host_cu = host_cu[:insertPosition] + freeline + host_cu[insertPosition:]
-
-
-
-		# do cudamemcpy from host to device for input vars
-		# dimblock
-		# dimgrid
-		# call kernel0
-		# cudamemcpy from device to host for output var
 
 	
 	else:
