@@ -226,7 +226,7 @@ def main():
 				indexClose = line.index(']')
 				var = line[indexOpen:indexClose+1]
 				
-				if var[1:-1].isdigit():
+				if not var[1:-1].isdigit():
 					updatedCodeLines.append(line.replace(var, dimString))
 				else:
 					updatedCodeLines.append(line)

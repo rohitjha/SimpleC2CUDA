@@ -7,8 +7,8 @@ __global__ void kernel0(int *A)
 	{
 	int i = 1;
 	i = i * i;
-	A[i] = 1;
-	A[t0] = 0;
+	A[t0] = 1;
+	A[0] = 0;
 
 
 	}
