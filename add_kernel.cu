@@ -7,7 +7,7 @@ __global__ void kernel0(int *a, int *b, int *c)
 	int t0 = threadIdx.y;
 	int t1 = threadIdx.x;
 	{
-            c[t0*3+t1]=a[t0*3+t1]+b[t0*3+t1];
+            c[t0*500+t1]=a[t0*500+t1]+b[t0*500+t1];
 
 
 	}

@@ -9,13 +9,15 @@ int main()
 	int A[10];
 
 	A[1] = 0;
-#pragma scop
+    
+    #pragma scop
 	int i = 1;
 	i = i * i;
 	A[i] = 1;
 	A[0] = 0;
-#pragma endscop
-	if (A[1] != 1)
+    #pragma endscop
+	
+    if (A[1] != 1)
 		return EXIT_FAILURE;
 
 	return EXIT_SUCCESS;

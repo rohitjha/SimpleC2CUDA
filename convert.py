@@ -250,8 +250,7 @@ def main():
 
 	
 
-	updatedCodeLines = '\n'.join(updatedCodeLines)
-	
+	updatedCodeLines = '\n'.join(updatedCodeLines)	
 	
 
 	kernelcu += updatedCodeLines

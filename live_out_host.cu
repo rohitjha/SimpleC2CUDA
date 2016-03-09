@@ -10,12 +10,14 @@ int main()
 	int A[10];
 
 	A[1] = 0;
-	int i = 1;
+    
+    	int i = 1;
 	i = i * i;
 	A[i] = 1;
 	A[0] = 0;
 
-	if (A[1] != 1)
+	
+    if (A[1] != 1)
 		return EXIT_FAILURE;
 
 	return EXIT_SUCCESS;
